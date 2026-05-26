@@ -1,0 +1,26 @@
+﻿# Données brutes (trop lourdes pour GitHub)
+data/raw/
+data/trimmed/
+resources/
+
+# Résultats générés (reproductibles via pipeline)
+results/
+
+# Logs
+logs/
+# Fichiers R temporaires
+.Rhistory
+.RData
+.Rproj.user/
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Docker
+*.tar
+
+# OS
+.DS_Store
+Thumbs.db

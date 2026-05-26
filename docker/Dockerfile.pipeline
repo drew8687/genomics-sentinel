@@ -1,0 +1,48 @@
+# ═══════════════════════════════════════════════════════════
+#  GenomicsSentinel — Pipeline Engine
+#  Base: mambaforge (conda-based, fast solver)
+#  Tools: FastQC, Trimmomatic, STAR, HISAT2, GATK, SAMtools,
+#         BWA, BCFtools, SnpEff, Snakemake, MultiQC
+# ═══════════════════════════════════════════════════════════
+FROM condaforge/mambaforge:latest
+
+LABEL maintainer="driss.eloifi@genomicssentinel.io"
+LABEL description="GenomicsSentinel - Full bioinformatics pipeline"
+LABEL version="1.0.0"
+
+# ── System deps ───────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl wget git unzip procps \
+    default-jdk \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Conda environment ─────────────────────────────────────
+COPY docker/envs/pipeline.yml /tmp/pipeline.yml
+
+RUN mamba env create -f /tmp/pipeline.yml && \
+    mamba clean -afy
+
+# ── Activate env by default ───────────────────────────────
+SHELL ["conda", "run", "-n", "genomics", "/bin/bash", "-c"]
+
+# ── GATK ──────────────────────────────────────────────────
+ARG GATK_VERSION=4.5.0.0
+RUN wget -q https://github.com/broadinstitute/gatk/releases/download/${GATK_VERSION}/gatk-${GATK_VERSION}.zip \
+    -O /opt/gatk.zip && \
+    unzip /opt/gatk.zip -d /opt && \
+    ln -s /opt/gatk-${GATK_VERSION}/gatk /usr/local/bin/gatk && \
+    rm /opt/gatk.zip
+
+# ── SnpEff ────────────────────────────────────────────────
+ARG SNPEFF_VERSION=5.2
+RUN wget -q https://snpeff.blob.core.windows.net/versions/snpEff_latest_core.zip \
+    -O /opt/snpeff.zip && \
+    unzip /opt/snpeff.zip -d /opt && \
+    rm /opt/snpeff.zip
+
+# ── Working directory ─────────────────────────────────────
+WORKDIR /workspace
+
+# ── Entrypoint ────────────────────────────────────────────
+ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "genomics"]
+CMD ["snakemake", "--help"]

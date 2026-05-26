@@ -1,0 +1,137 @@
+version: "3.9"
+
+# ═══════════════════════════════════════════════════════════
+#  GenomicsSentinel — Docker Compose Stack
+#  Services: pipeline, rstudio, jupyter, dashboard, pgdb
+# ═══════════════════════════════════════════════════════════
+
+networks:
+  genomics-net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  rstudio-home:
+  jupyter-work:
+  results-vol:
+
+services:
+
+  # ── 1. Snakemake Pipeline Engine ─────────────────────────
+  pipeline:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.pipeline
+    container_name: genomics-pipeline
+    volumes:
+      - ./data:/workspace/data:ro
+      - ./results:/workspace/results
+      - ./config:/workspace/config:ro
+      - ./Snakefile:/workspace/Snakefile:ro
+      - ./snakemake:/workspace/snakemake:ro
+      - ./scripts:/workspace/scripts:ro
+      - results-vol:/workspace/results
+    networks:
+      - genomics-net
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+    command: >
+      snakemake
+        --cores all
+        --use-conda
+        --latency-wait 30
+        --rerun-incomplete
+        --printshellcmds
+    profiles: ["pipeline"]
+
+  # ── 2. RStudio Server (DESeq2, edgeR, Seurat, ggplot2) ──
+  rstudio:
+    image: bioconductor/bioconductor_docker:RELEASE_3_19
+    container_name: genomics-rstudio
+    ports:
+      - "8787:8787"
+    volumes:
+      - rstudio-home:/home/rstudio
+      - ./scripts/rnaseq:/home/rstudio/rnaseq
+      - ./scripts/scrnaseq:/home/rstudio/scrnaseq
+      - results-vol:/home/rstudio/results
+      - ./data:/home/rstudio/data:ro
+    networks:
+      - genomics-net
+    environment:
+      - PASSWORD=genomics2024
+      - ROOT=TRUE
+      - USERID=1000
+    restart: unless-stopped
+
+  # ── 3. JupyterLab (Python ML — SHAP, XGBoost, Scanpy) ───
+  jupyter:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.jupyter
+    container_name: genomics-jupyter
+    ports:
+      - "8888:8888"
+    volumes:
+      - jupyter-work:/home/jovyan/work
+      - ./scripts/ml:/home/jovyan/work/ml
+      - ./notebooks:/home/jovyan/work/notebooks
+      - results-vol:/home/jovyan/work/results
+      - ./data:/home/jovyan/work/data:ro
+    networks:
+      - genomics-net
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - JUPYTER_TOKEN=genomics2024
+    restart: unless-stopped
+
+  # ── 4. Results Dashboard (FastAPI + React) ───────────────
+  dashboard:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dashboard
+    container_name: genomics-dashboard
+    ports:
+      - "3000:3000"
+      - "8000:8000"
+    volumes:
+      - results-vol:/app/results:ro
+    networks:
+      - genomics-net
+    depends_on:
+      - pgdb
+    environment:
+      - DATABASE_URL=postgresql://genomics:genomics2024@pgdb:5432/genomicsdb
+    restart: unless-stopped
+
+  # ── 5. PostgreSQL — Results & Metadata Store ─────────────
+  pgdb:
+    image: postgres:16-alpine
+    container_name: genomics-db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init_db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - genomics-net
+    environment:
+      - POSTGRES_DB=genomicsdb
+      - POSTGRES_USER=genomics
+      - POSTGRES_PASSWORD=genomics2024
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U genomics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── 6. Adminer (DB UI) ───────────────────────────────────
+  adminer:
+    image: adminer:latest
+    container_name: genomics-adminer
+    ports:
+      - "8080:8080"
+    networks:
+      - genomics-net
+    depends_on:
+      - pgdb
+    restart: unless-stopped

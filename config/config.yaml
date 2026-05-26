@@ -1,0 +1,66 @@
+## GenomicsSentinel — Pipeline Configuration
+## Adapt this file to your dataset and reference genome
+
+# ─── Samples ──────────────────────────────────────────────
+samples:
+  - SRR_control_1
+  - SRR_control_2
+  - SRR_control_3
+  - SRR_treated_1
+  - SRR_treated_2
+  - SRR_treated_3
+
+conditions:
+  control: [SRR_control_1, SRR_control_2, SRR_control_3]
+  treated: [SRR_treated_1, SRR_treated_2, SRR_treated_3]
+
+# ─── Reference Genome ─────────────────────────────────────
+genome:
+  fasta: "resources/genome/GRCh38.fa"
+  gtf:   "resources/genome/GRCh38.gtf"
+  star_index: "resources/genome/STAR_index"
+  bowtie2_index: "resources/genome/bowtie2/GRCh38"
+
+# ─── scRNA-Seq ─────────────────────────────────────────────
+scrnaseq:
+  cellranger_out: "data/scrnaseq/cellranger_output"
+  min_cells: 3
+  min_features: 200
+  max_mt_pct: 20
+  n_pcs: 30
+  resolution: 0.5
+
+# ─── Variant Calling ──────────────────────────────────────
+variants:
+  dbsnp: "resources/dbsnp/dbsnp_146.hg38.vcf.gz"
+  known_indels: "resources/known_indels/Mills_1000G.hg38.vcf.gz"
+  min_qual: 30
+  min_depth: 10
+
+# ─── ML ───────────────────────────────────────────────────
+ml:
+  target_column: "condition"
+  test_size: 0.2
+  random_state: 42
+  n_estimators: 500
+  models: [random_forest, xgboost, svm]
+
+# ─── Tools & Containers ───────────────────────────────────
+threads:
+  fastqc: 4
+  trimmomatic: 8
+  star: 16
+  samtools: 8
+  gatk: 8
+
+# ─── DE Analysis ──────────────────────────────────────────
+deseq2:
+  padj_threshold: 0.05
+  lfc_threshold: 1.0
+  shrinkage: apeglm
+
+# ─── Enrichment Analysis ──────────────────────────────────
+gsea:
+  organism: "hsapiens"
+  ontology: [BP, MF, CC, KEGG]
+  pvalue_cutoff: 0.05

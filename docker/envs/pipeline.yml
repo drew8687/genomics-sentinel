@@ -1,0 +1,59 @@
+name: genomics
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+
+dependencies:
+  # ── Python base ──────────────────────────────────────────
+  - python=3.11
+  - pip
+
+  # ── Workflow ─────────────────────────────────────────────
+  - snakemake-minimal=7.32.4
+  - snakemake-executor-plugin-cluster-generic
+
+  # ── QC ───────────────────────────────────────────────────
+  - fastqc=0.12.1
+  - multiqc=1.21
+  - trimmomatic=0.39
+  - fastp=0.23.4
+
+  # ── Alignment — bulk RNA-Seq ─────────────────────────────
+  - star=2.7.11a
+  - hisat2=2.2.1
+  - subread=2.0.6            # featureCounts
+
+  # ── Alignment — DNA / WGS ────────────────────────────────
+  - bwa=0.7.18
+  - bwa-mem2=2.2.1
+
+  # ── BAM processing ───────────────────────────────────────
+  - samtools=1.19
+  - picard=3.1.1
+
+  # ── Variant Calling ──────────────────────────────────────
+  - bcftools=1.19
+  - htslib=1.19
+  - vep=110                  # Ensembl VEP
+
+  # ── Python bioinformatics ─────────────────────────────────
+  - pysam=0.22
+  - biopython=1.83
+  - pyvcf3
+
+  # ── Python data science ───────────────────────────────────
+  - pandas=2.2
+  - numpy=1.26
+  - scipy=1.12
+  - scikit-learn=1.4
+  - matplotlib=3.8
+  - seaborn=0.13
+
+  # ── Python ML ─────────────────────────────────────────────
+  - pip:
+    - xgboost==2.0.3
+    - shap==0.44.0
+    - lightgbm==4.3.0
+    - optuna==3.6.1           # hyperparameter optimization
+    - mlflow==2.11.1          # experiment tracking
